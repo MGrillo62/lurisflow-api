@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "lurisflow-api",
   "version": "1.0.0",
   "private": true,
@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "lint": "eslint src/"
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "@clerk/backend": "^1.13.3",
