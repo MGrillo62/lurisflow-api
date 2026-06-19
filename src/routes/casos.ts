@@ -1,4 +1,4 @@
-﻿import { Hono } from "hono";
+import { Hono } from "hono";
 import { sql } from "../db/index.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRole, requireTenantAccess } from "../middleware/rbac.middleware.js";
@@ -71,9 +71,9 @@ casosRouter.get("/", authMiddleware, async (c) => {
     }
 
     return c.json({ success: true, data: casos });
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET /v1/casos error:", error);
-    return c.json({ success: false, error: "Error al obtener casos" }, 500);
+    return c.json({ success: false, error: `Error al obtener casos: ${error.message || error}` }, 500);
   }
 });
 
