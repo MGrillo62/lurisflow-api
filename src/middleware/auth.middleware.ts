@@ -33,8 +33,8 @@ export async function authMiddleware(c: Context, next: Next) {
       secretKey: process.env.CLERK_SECRET_KEY,
     });
 
-    const userId = tokenPayload.sub;
     const publicMetadata = tokenPayload.metadata as Record<string, unknown> | undefined;
+    const userId = (publicMetadata?.db_user_id as string) ?? tokenPayload.sub;
     const role = (publicMetadata?.role as string) ?? "CLIENTE";
     const tenantId = (publicMetadata?.tenant_id as string) ?? null;
 
