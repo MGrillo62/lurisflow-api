@@ -1,5 +1,6 @@
 import { verifyToken, createClerkClient } from "@clerk/backend";
 import type { Context, Next } from "hono";
+import { sql } from "../db/index.js";
 
 export type AuthPayload = {
   userId: string;
@@ -38,18 +39,33 @@ export async function authMiddleware(c: Context, next: Next) {
     });
 
     let publicMetadata = tokenPayload.metadata as Record<string, unknown> | undefined;
+    let email: string | undefined;
 
-    // Si la metadata no viene en el token JWT (comportamiento por defecto de Clerk
-    // a menos que se configure una plantilla personalizada), consultamos directamente la API
-    if (!publicMetadata || !publicMetadata.db_user_id) {
-      console.log(`Buscando metadata en Clerk para el usuario: ${tokenPayload.sub}`);
-      const clerkUser = await clerkClient.users.getUser(tokenPayload.sub);
-      publicMetadata = clerkUser.publicMetadata as Record<string, unknown> | undefined;
+    // Consultamos la API de Clerk para obtener el email y la metadata
+    console.log(`Buscando info en Clerk para el usuario: ${tokenPayload.sub}`);
+    const clerkUser = await clerkClient.users.getUser(tokenPayload.sub);
+    publicMetadata = clerkUser.publicMetadata as Record<string, unknown> | undefined;
+    email = clerkUser.emailAddresses[0]?.emailAddress;
+
+    let userId = (publicMetadata?.db_user_id as string) ?? tokenPayload.sub;
+    let role = (publicMetadata?.role as string) ?? "CLIENTE";
+    let tenantId = (publicMetadata?.tenant_id as string) ?? null;
+
+    // Intentar buscar en la base de datos local por correo para mapear correctamente
+    if (email) {
+      const [dbUser] = await sql`
+        SELECT id, role, tenant_id 
+        FROM users 
+        WHERE LOWER(email) = LOWER(${email.trim()})
+        LIMIT 1
+      `;
+      if (dbUser) {
+        userId = dbUser.id;
+        role = dbUser.role;
+        tenantId = dbUser.tenant_id;
+        console.log(`Mapeado Clerk User ${tokenPayload.sub} a DB User ${userId} (${email})`);
+      }
     }
-
-    const userId = (publicMetadata?.db_user_id as string) ?? tokenPayload.sub;
-    const role = (publicMetadata?.role as string) ?? "CLIENTE";
-    const tenantId = (publicMetadata?.tenant_id as string) ?? null;
 
     c.set("auth", {
       userId,
